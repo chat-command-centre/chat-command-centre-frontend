@@ -64,19 +64,28 @@ function InnerProvider({
   setShowConsentAgreementPopup: (show: boolean) => void;
 }) {
   const { data: session, status } = useNextAuthSession();
-  const { data: userData } = api.user.getUser.useQuery(undefined, {
-    enabled: !!session?.user?.id,
-  });
+  const { data: userData, isLoading: userDataLoading } =
+    api.user.getUser.useQuery(undefined, {
+      enabled: !!session?.user?.id,
+    });
 
   useEffect(() => {
-    if (session && userData) {
+    if (status === "authenticated" && userData && !userDataLoading) {
       if (!userData.emailVerified) {
         setShowVerificationPopup(true);
+        setShowConsentAgreementPopup(false);
       } else if (!userData.hasAcceptedConsent) {
+        setShowVerificationPopup(false);
         setShowConsentAgreementPopup(true);
+      } else {
+        setShowVerificationPopup(false);
+        setShowConsentAgreementPopup(false);
       }
+    } else {
+      setShowVerificationPopup(false);
+      setShowConsentAgreementPopup(false);
     }
-  }, [session, userData]);
+  }, [status, userData, userDataLoading]);
 
   const closeVerificationPopup = () => setShowVerificationPopup(false);
   const closeConsentAgreementPopup = () => setShowConsentAgreementPopup(false);

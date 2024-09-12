@@ -32,4 +32,12 @@ async function seed() {
   console.log("Seed data inserted successfully");
 }
 
-seed().catch(console.error);
+seed()
+  .then(() => {
+    console.log("Seed data inserted successfully");
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("Error seeding data:", error);
+    process.exit(1);
+  });

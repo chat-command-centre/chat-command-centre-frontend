@@ -10,9 +10,16 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev",
+    "dev:reset-deps": "rm -rf node_modules package-lock.json bun.lockb .next drizzle .turbo && bun i",
+    "dev:hard-reset": "bun db:reset && bun dev",
     "lint": "next lint",
     "start": "next start",
-    "db:seed": "bun run src/server/db/seed.ts"
+    "db:init": "bun db:generate && bun db:migrate && bun db:push",
+    "db:seed": "bun src/server/db/seed.ts",
+    "db:stop": "./stop-database.sh",
+    "db:nuke": "docker stop $(docker ps -a -q) || true && docker rm $(docker ps -a -q) || true && docker volume rm $(docker volume ls -q) || true",
+    "db:create": "./start-database.sh && sleep 3 && bun db:init && bun db:seed",
+    "db:reset": "bun db:stop && rm -rf drizzle || true && bun db:create"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.1.0",
