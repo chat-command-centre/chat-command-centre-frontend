@@ -2,6 +2,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/router";
+import { Search, X } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Input } from "./ui/input";
 
 interface HeaderProps {
   onThemeChange: (theme: string) => void;
@@ -10,6 +20,7 @@ interface HeaderProps {
 export function Header({ onThemeChange }: HeaderProps) {
   const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const router = useRouter();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -19,57 +30,74 @@ export function Header({ onThemeChange }: HeaderProps) {
     }
   };
 
-  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onThemeChange(e.target.value);
+  const handleThemeChange = (value: string) => {
+    onThemeChange(value);
   };
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-10 bg-white/70 p-4 shadow-lg backdrop-blur-md">
+    <header className="fixed left-4 right-4 top-4 z-10 rounded-lg bg-white/70 p-4 shadow-lg backdrop-blur-md">
       <div className="container mx-auto flex items-center justify-between">
         <Link href="/" className="text-2xl font-bold text-blue-600">
           Blog
         </Link>
-        <form onSubmit={handleSearch} className="mx-4 flex-grow">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search posts..."
-            className="w-full rounded-lg border bg-white/50 px-4 py-2 backdrop-blur-sm"
-          />
-        </form>
         <div className="flex items-center space-x-4">
-          <select
-            onChange={handleThemeChange}
-            className="rounded border bg-white/50 px-2 py-1"
-          >
-            <option value="light">Light</option>
-            <option value="light-red">Light Red</option>
-            <option value="light-yellow">Light Yellow</option>
-            <option value="dark">Dark</option>
-            <option value="dark-red">Dark Red</option>
-            <option value="dark-yellow">Dark Yellow</option>
-          </select>
+          {isSearchVisible ? (
+            <form onSubmit={handleSearch} className="flex items-center">
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search posts..."
+                className="mr-2 w-64"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSearchVisible(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </form>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSearchVisible(true)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          )}
+          <Select onValueChange={handleThemeChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select theme" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">Light</SelectItem>
+              <SelectItem value="light-red">Light Red</SelectItem>
+              <SelectItem value="light-yellow">Light Yellow</SelectItem>
+              <SelectItem value="dark">Dark</SelectItem>
+              <SelectItem value="dark-red">Dark Red</SelectItem>
+              <SelectItem value="dark-yellow">Dark Yellow</SelectItem>
+            </SelectContent>
+          </Select>
           {session ? (
             <>
-              <Link href="/profile" className="text-blue-600 hover:underline">
-                Profile
-              </Link>
-              <button
-                onClick={() => void signOut()}
-                className="text-blue-600 hover:underline"
-              >
+              <Button variant="ghost" asChild>
+                <Link href="/profile">Profile</Link>
+              </Button>
+              <Button variant="ghost" onClick={() => void signOut()}>
                 Log out
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <Link href="/signin" className="text-blue-600 hover:underline">
-                Sign in
-              </Link>
-              <Link href="/signup" className="text-blue-600 hover:underline">
-                Sign up
-              </Link>
+              <Button variant="ghost" asChild>
+                <Link href="/signin">Sign in</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="/signup">Sign up</Link>
+              </Button>
             </>
           )}
         </div>
