@@ -1,17 +1,19 @@
-import { signIn } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "~/utils/api";
 import { useRouter } from "next/router";
 import { FaGoogle, FaApple, FaFacebook, FaDiscord } from "react-icons/fa";
 import { SiMicrosoft } from "react-icons/si";
+import { signIn, useSession } from "next-auth/react";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [name, setName] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   const signUp = api.auth.signUp.useMutation({
     onSuccess: () => {
@@ -25,10 +27,25 @@ export default function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     if (isSigningUp) {
       signUp.mutate({ name, email, password });
     } else {
-      await signIn("credentials", { email, password, callbackUrl: "/" });
+      try {
+        const result = await signIn("credentials", {
+          redirect: false,
+          email,
+          password,
+        });
+        if (result?.error) {
+          setError("Invalid email or password");
+        } else {
+          void router.push("/debug");
+        }
+      } catch (error) {
+        setError("An error occurred during sign in");
+        console.error(error);
+      }
     }
   };
 
@@ -144,6 +161,7 @@ export default function SignIn() {
             </Link>
           </div>
         )}
+        {error && <div className="mt-4 text-center text-red-600">{error}</div>}
       </div>
     </div>
   );

@@ -5,9 +5,9 @@ import "~/styles/globals.css";
 import { useEffect, useRef, useState } from "react";
 import { createParticleSystem } from "~/utils/particleSystem";
 import { Header } from "~/components/Header";
-import { CustomSessionProvider } from "~/utils/customAuth";
 import EmailVerificationPopup from "~/components/EmailVerificationPopup";
 import ConsentAgreementPopup from "~/components/ConsentAgreementPopup";
+import { SessionProvider } from "next-auth/react";
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -30,7 +30,7 @@ const MyApp: AppType<{ session: Session | null }> = ({
   };
 
   return (
-    <CustomSessionProvider session={session}>
+    <SessionProvider session={session}>
       <canvas id="particle-canvas" ref={canvasRef}></canvas>
       <Header onThemeChange={handleThemeChange} />
       <div className={`theme-${theme} pt-20`}>
@@ -38,7 +38,7 @@ const MyApp: AppType<{ session: Session | null }> = ({
       </div>
       <EmailVerificationPopup />
       <ConsentAgreementPopup onAccept={() => {}} />
-    </CustomSessionProvider>
+    </SessionProvider>
   );
 };
 

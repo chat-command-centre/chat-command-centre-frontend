@@ -1,24 +1,51 @@
+import { useSession } from "next-auth/react";
 import { useState } from "react";
-import { useCustomSession } from "~/utils/customAuth";
 import { api } from "~/utils/api";
+import { useRouter } from "next/router";
 
 export default function EmailVerificationPopup() {
-  const { showVerificationPopup, closeVerificationPopup, session } =
-    useCustomSession();
+  const { data: session, status } = useSession();
   const [verificationCode, setVerificationCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const submitVerification = api.auth.submitEmailVerificationCode.useMutation({
     onSuccess: () => {
-      closeVerificationPopup();
+      router.reload();
+    },
+    onError: (error) => {
+      console.error("Error verifying email:", error);
+      setError("Failed to verify email. Please try again.");
     },
   });
 
-  const resendVerification = api.auth.resendEmailVerificationCode.useMutation();
+  const resendVerification = api.auth.resendEmailVerificationCode.useMutation({
+    onSuccess: () => {
+      setError(null);
+      // Optionally, show a success message
+    },
+    onError: (error) => {
+      console.error("Error resending verification code:", error);
+      setError("Failed to resend verification code. Please try again.");
+    },
+  });
 
-  if (!showVerificationPopup) return null;
+  const { data: userData, isLoading: userDataLoading } =
+    api.user.getUser.useQuery(undefined, {
+      enabled: status === "authenticated",
+    });
+
+  if (
+    status !== "authenticated" ||
+    userDataLoading ||
+    !!userData?.emailVerified
+  ) {
+    return null;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     submitVerification.mutate({
       email: session?.user?.email ?? "",
       token: verificationCode,
@@ -26,7 +53,12 @@ export default function EmailVerificationPopup() {
   };
 
   const handleResend = () => {
+    setError(null);
     resendVerification.mutate({ email: session?.user?.email ?? "" });
+  };
+
+  const handleClose = () => {
+    router.reload();
   };
 
   return (
@@ -41,21 +73,26 @@ export default function EmailVerificationPopup() {
             placeholder="Enter verification code"
             className="w-full rounded border p-2"
           />
+          {error && <p className="text-red-500">{error}</p>}
           <button
             type="submit"
-            className="rounded bg-blue-500 px-4 py-2 text-white"
+            className="rounded bg-blue-500 px-4 py-2 text-white disabled:bg-gray-400"
+            disabled={submitVerification.isPending}
           >
-            Verify
+            {submitVerification.isPending ? "Verifying..." : "Verify"}
           </button>
         </form>
         <button
           onClick={handleResend}
-          className="mt-4 text-blue-600 hover:underline"
+          className="mt-4 text-blue-600 hover:underline disabled:text-gray-400"
+          disabled={resendVerification.isPending}
         >
-          Resend verification code
+          {resendVerification.isPending
+            ? "Sending..."
+            : "Resend verification code"}
         </button>
         <button
-          onClick={closeVerificationPopup}
+          onClick={handleClose}
           className="ml-4 mt-4 text-gray-600 hover:underline"
         >
           Close

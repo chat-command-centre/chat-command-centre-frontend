@@ -7,6 +7,7 @@ import { hashPassword, generateVerificationToken } from "~/server/auth";
 import { db } from "~/server/db";
 import { sendEmail } from "~/utils/email";
 import { env } from "~/env";
+import { loginAttempts } from "~/server/db/schema";
 
 export const authRouter = createTRPCRouter({
   signUp: publicProcedure
@@ -234,4 +235,37 @@ export const authRouter = createTRPCRouter({
 
     return user[0];
   }),
+
+  verifyEmail: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input }) => {
+      const user = await db.query.users.findFirst({
+        where: eq(users.resetToken, input.token),
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invalid or expired verification token",
+        });
+      }
+
+      if (user.resetTokenExpiry && user.resetTokenExpiry < new Date()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Verification token has expired",
+        });
+      }
+
+      await db
+        .update(users)
+        .set({
+          emailVerified: new Date(),
+          resetToken: null,
+          resetTokenExpiry: null,
+        })
+        .where(eq(users.id, user.id));
+
+      return { success: true };
+    }),
 });

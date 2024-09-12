@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "~/utils/api";
-import { useCustomSession } from "~/utils/customAuth";
 import { useRouter } from "next/router";
+import { useSession } from "next-auth/react";
 
 interface ConsentAgreementPopupProps {
   onAccept: () => void;
@@ -10,7 +10,7 @@ interface ConsentAgreementPopupProps {
 export default function ConsentAgreementPopup({
   onAccept,
 }: ConsentAgreementPopupProps) {
-  const { session, showConsentAgreementPopup } = useCustomSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const [isAgreementAccepted, setIsAgreementAccepted] = useState(false);
@@ -38,7 +38,16 @@ export default function ConsentAgreementPopup({
     }
   };
 
-  if (!showConsentAgreementPopup) {
+  const { data: userData, isLoading: userDataLoading } =
+    api.user.getUser.useQuery(undefined, {
+      enabled: status === "authenticated",
+    });
+
+  if (
+    status !== "authenticated" ||
+    userDataLoading ||
+    !!userData?.hasAcceptedConsent
+  ) {
     return null;
   }
 
@@ -64,10 +73,10 @@ export default function ConsentAgreementPopup({
         {error && <p className="mb-4 text-red-500">{error}</p>}
         <button
           onClick={handleAccept}
-          disabled={!isAgreementAccepted || acceptAgreementMutation.isLoading}
+          disabled={!isAgreementAccepted || acceptAgreementMutation.isPending}
           className="rounded bg-blue-500 px-4 py-2 text-white disabled:bg-gray-400"
         >
-          {acceptAgreementMutation.isLoading
+          {acceptAgreementMutation.isPending
             ? "Processing..."
             : "Accept and Continue"}
         </button>

@@ -9,7 +9,7 @@ import { eq, desc, sql, like } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
 import { env } from "~/env";
-import { sendThankYouEmail } from "~/utils/email";
+import { sendEmail, sendThankYouEmail } from "~/utils/email";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
@@ -161,7 +161,15 @@ export const postRouter = createTRPCRouter({
       });
 
       if (input.email) {
-        await sendThankYouEmail(input.email, post.name, input.amount);
+        const subject = "Thank You for Your Tip!";
+        const html = `
+            <h1>Thank You for Your Tip!</h1>
+            <p>We appreciate your generous tip of $${(input.amount / 100).toFixed(2)} for the post "${post.name}".</p>
+            <p>Your support helps our authors create more awesome content!</p>
+            <p>Thank you for being a part of our community!</p>
+          `;
+
+        await sendEmail({ to: input.email, subject, html });
       }
 
       return { clientSecret: paymentIntent.client_secret };

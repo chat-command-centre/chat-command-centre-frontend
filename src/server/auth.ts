@@ -17,6 +17,7 @@ import {
   sessions,
   users,
   verificationTokens,
+  loginAttempts,
 } from "~/server/db/schema";
 import EmailProvider from "next-auth/providers/email";
 import { transportConfig } from "~/utils/email";
@@ -47,13 +48,25 @@ declare module "next-auth" {
  */
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
-    }),
+    // session: ({ session, user }) => ({
+    //   ...session,
+    //   user: {
+    //     ...session.user,
+    //     id: user.id,
+    //   },
+    // }),
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    },
   },
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -77,78 +90,107 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(
-        credentials: { email: string; password: string } | undefined,
-      ) {
+      async authorize(credentials, req) {
+        console.log("Authorizing user with credentials: ", credentials);
         if (!credentials) {
+          console.log("No credentials provided, returning null.");
           return null;
         }
-        const results = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email));
-        if (results.length === 0) {
-          return null;
+        const user = await db.query.users.findFirst({
+          where: eq(users.email, credentials.email),
+        });
+        console.log("User found: ", user);
+
+        const success =
+          user && user.hashedPassword
+            ? await bcrypt.compare(credentials.password, user.hashedPassword)
+            : false;
+        console.log("Login success: ", success);
+
+        // Log login attempt (development only)
+        if (env.NODE_ENV === "development") {
+          console.log("Logging login attempt...");
+          await db.insert(loginAttempts).values({
+            email: credentials.email,
+            success,
+            ipAddress:
+              (req.headers["x-forwarded-for"] as string) ??
+              req.socket.remoteAddress,
+            userAgent: req.headers["user-agent"],
+          });
+          console.log("Login attempt logged.");
         }
-        const user = results[0]!;
-        if (user.hashedPassword) {
-          const passwordMatch = await bcrypt.compare(
-            credentials!.password,
-            user.hashedPassword,
-          );
-          if (passwordMatch) {
-            return user;
-          }
+
+        if (success && user) {
+          // Return only the necessary User properties
+          console.log("Returning user data: ", {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          });
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          };
         }
+        console.log("Login failed, returning null.");
         return null;
       },
-      ...(env.AZURE_AD_CLIENT_ID &&
-      env.AZURE_AD_CLIENT_SECRET &&
-      env.AZURE_AD_TENANT_ID
-        ? [
-            AzureADProvider({
-              clientId: env.AZURE_AD_CLIENT_ID,
-              clientSecret: env.AZURE_AD_CLIENT_SECRET,
-              tenantId: env.AZURE_AD_TENANT_ID,
-            }),
-          ]
-        : []),
-      ...(env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
-        ? [
-            DiscordProvider({
-              clientId: env.DISCORD_CLIENT_ID,
-              clientSecret: env.DISCORD_CLIENT_SECRET,
-            }),
-          ]
-        : []),
-      ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
-        ? [
-            GoogleProvider({
-              clientId: env.GOOGLE_CLIENT_ID,
-              clientSecret: env.GOOGLE_CLIENT_SECRET,
-            }),
-          ]
-        : []),
-      ...(env.APPLE_ID && env.APPLE_CLIENT_SECRET
-        ? [
-            AppleProvider({
-              clientId: env.APPLE_ID,
-              clientSecret: env.APPLE_CLIENT_SECRET,
-            }),
-          ]
-        : []),
-      ...(env.FACEBOOK_CLIENT_ID && env.FACEBOOK_CLIENT_SECRET
-        ? [
-            FacebookProvider({
-              clientId: env.FACEBOOK_CLIENT_ID,
-              clientSecret: env.FACEBOOK_CLIENT_SECRET,
-            }),
-          ]
-        : []),
     }),
+    ...(env.AZURE_AD_CLIENT_ID &&
+    env.AZURE_AD_CLIENT_SECRET &&
+    env.AZURE_AD_TENANT_ID
+      ? [
+          AzureADProvider({
+            clientId: env.AZURE_AD_CLIENT_ID,
+            clientSecret: env.AZURE_AD_CLIENT_SECRET,
+            tenantId: env.AZURE_AD_TENANT_ID,
+          }),
+        ]
+      : []),
+    ...(env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
+      ? [
+          DiscordProvider({
+            clientId: env.DISCORD_CLIENT_ID,
+            clientSecret: env.DISCORD_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? [
+          GoogleProvider({
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(env.APPLE_ID && env.APPLE_CLIENT_SECRET
+      ? [
+          AppleProvider({
+            clientId: env.APPLE_ID,
+            clientSecret: env.APPLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(env.FACEBOOK_CLIENT_ID && env.FACEBOOK_CLIENT_SECRET
+      ? [
+          FacebookProvider({
+            clientId: env.FACEBOOK_CLIENT_ID,
+            clientSecret: env.FACEBOOK_CLIENT_SECRET,
+          }),
+        ]
+      : []),
   ],
   pages: {
-    signIn: "/signin",
+    signIn: "/auth/signin",
+    error: "/auth/signin",
+    verifyRequest: "/auth/verify-request",
+  },
+  session: {
+    strategy: "jwt",
   },
 };
 

@@ -56,7 +56,7 @@ export function Header({ onThemeChange }: HeaderProps) {
                 Profile
               </Link>
               <button
-                onClick={() => signOut()}
+                onClick={() => void signOut()}
                 className="text-blue-600 hover:underline"
               >
                 Log out

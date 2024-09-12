@@ -209,3 +209,20 @@ export const tipsRelations = relations(tips, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const loginAttempts = createTable(
+  "login_attempt",
+  {
+    id: serial("id").primaryKey(),
+    email: varchar("email", { length: 255 }).notNull(),
+    success: boolean("success").notNull(),
+    ipAddress: varchar("ip_address", { length: 45 }),
+    userAgent: varchar("user_agent", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (loginAttempt) => ({
+    emailIndex: index("login_attempt_email_idx").on(loginAttempt.email),
+  }),
+);

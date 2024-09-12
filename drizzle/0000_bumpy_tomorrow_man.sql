@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS "app_account" (
 	CONSTRAINT "app_account_provider_provider_account_id_pk" PRIMARY KEY("provider","provider_account_id")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "app_login_attempt" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"email" varchar(255) NOT NULL,
+	"success" boolean NOT NULL,
+	"ip_address" varchar(45),
+	"user_agent" varchar(255),
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "app_post" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(256) DEFAULT 'Untitled' NOT NULL,
@@ -109,6 +118,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "account_user_id_idx" ON "app_account" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "login_attempt_email_idx" ON "app_login_attempt" USING btree ("email");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "created_by_idx" ON "app_post" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "name_idx" ON "app_post" USING btree ("name");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "session_user_id_idx" ON "app_session" USING btree ("user_id");--> statement-breakpoint

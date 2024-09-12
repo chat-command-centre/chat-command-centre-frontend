@@ -30,28 +30,28 @@ export const transportConfig =
 const transporter = nodemailer.createTransport(transportConfig);
 
 // if (env.EMAIL_SERVER_USER && env.EMAIL_SERVER_PASSWORD) {
-console.log("Using test email configuration");
-console.log("Test account credentials:", testAccount);
+//   console.log("Using test email configuration");
+//   console.log("Test account credentials:", testAccount);
 
-// Send a test email
-await transporter
-  .sendMail({
-    from: testAccount.user,
-    to: "jacobfv123@gmail.com",
-    subject: "Test Email from Development Environment",
-    html: "<p>This is a test email sent from the development environment.</p>",
-  })
-  .then((info) => {
-    console.log(
-      "Test email sent. Preview URL: %s",
-      nodemailer.getTestMessageUrl(info),
-    );
-  })
-  .catch((error) => {
-    console.error("Error sending test email:", error);
-  });
+//   // Send a test email
+//   await transporter
+//     .sendMail({
+//       from: testAccount.user,
+//       to: "jacobfv123@gmail.com",
+//       subject: "Test Email from Development Environment",
+//       html: "<p>This is a test email sent from the development environment.</p>",
+//     })
+//     .then((info) => {
+//       console.log(
+//         "Test email sent. Preview URL: %s",
+//         nodemailer.getTestMessageUrl(info),
+//       );
+//     })
+//     .catch((error) => {
+//       console.error("Error sending test email:", error);
+//     });
 
-console.log("Test email sent");
+//   console.log("Test email sent");
 // }
 
 export async function sendEmail({
@@ -63,26 +63,13 @@ export async function sendEmail({
   subject: string;
   html: string;
 }) {
-  await transporter.sendMail({
+  const messageInfo = await transporter.sendMail({
     from: transportConfig.auth.user,
     to,
     subject,
     html,
   });
-}
-
-export async function sendThankYouEmail(
-  email: string,
-  postTitle: string,
-  amount: number,
-) {
-  const subject = "Thank You for Your Tip!";
-  const html = `
-    <h1>Thank You for Your Tip!</h1>
-    <p>We appreciate your generous tip of $${(amount / 100).toFixed(2)} for the post "${postTitle}".</p>
-    <p>Your support helps our authors create more awesome content!</p>
-    <p>Thank you for being a part of our community!</p>
-  `;
-
-  await sendEmail({ to: email, subject, html });
+  console.log("Message sent: %s", messageInfo.messageId);
+  console.log("Preview URL: %s", nodemailer.getTestMessageUrl(messageInfo));
+  return messageInfo.messageId;
 }
