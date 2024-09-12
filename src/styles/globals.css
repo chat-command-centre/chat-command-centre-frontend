@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import "@/styles/globals.css";
-@import "@/components/ui/button.css";
-@import "@/components/ui/select.css";
-@import "@/components/ui/input.css";
-
 :root {
   --background: #f0f4f8;
   --text: #2c3e50;
