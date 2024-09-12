@@ -46,6 +46,8 @@ export const users = createTable("user", {
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   posts: many(posts),
+  followers: many(follows, { relationName: "follower" }),
+  following: many(follows, { relationName: "following" }),
 }));
 
 export const accounts = createTable(
@@ -226,3 +228,36 @@ export const loginAttempts = createTable(
     emailIndex: index("login_attempt_email_idx").on(loginAttempt.email),
   }),
 );
+
+export const follows = createTable(
+  "follow",
+  {
+    id: serial("id").primaryKey(),
+    followerId: varchar("follower_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    followingId: varchar("following_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (follow) => ({
+    followerFollowingIndex: index("follower_following_idx").on(
+      follow.followerId,
+      follow.followingId,
+    ),
+  }),
+);
+
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(users, {
+    fields: [follows.followerId],
+    references: [users.id],
+  }),
+  following: one(users, {
+    fields: [follows.followingId],
+    references: [users.id],
+  }),
+}));

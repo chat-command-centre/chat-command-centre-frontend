@@ -70,7 +70,18 @@ export default function PostPage() {
           <Link href="/" className="back-link mb-4 inline-block">
             &larr; Back to all rad posts
           </Link>
-          <h1 className="blog-title mb-6 text-4xl font-bold">{post.name}</h1>
+          <h1 className="blog-title mb-2 text-4xl font-bold">{post.name}</h1>
+          <div className="mb-6 text-gray-600">
+            <Link
+              href={`/profile/${post.createdBy.id}`}
+              className="hover:underline"
+            >
+              By {post.createdBy.name}
+            </Link>
+            <span className="ml-2 text-sm">
+              {new Date(post.createdAt).toLocaleDateString()}
+            </span>
+          </div>
           <div className="mb-4">
             <Link
               href={`/profile/${post.createdBy.id}`}
