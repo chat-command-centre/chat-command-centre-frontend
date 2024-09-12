@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "~/utils/api";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
@@ -15,10 +15,12 @@ export default function ConsentAgreementPopup({
 
   const [isAgreementAccepted, setIsAgreementAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState(true);
 
   const acceptAgreementMutation = api.user.acceptConsentAgreement.useMutation({
     onSuccess: () => {
       onAccept();
+      setShowPopup(false);
     },
     onError: (error) => {
       console.error("Error accepting consent agreement:", error);
@@ -43,11 +45,17 @@ export default function ConsentAgreementPopup({
       enabled: status === "authenticated",
     });
 
-  if (
-    status !== "authenticated" ||
-    userDataLoading ||
-    !!userData?.hasAcceptedConsent
-  ) {
+  useEffect(() => {
+    if (
+      status !== "authenticated" ||
+      userDataLoading ||
+      !!userData?.hasAcceptedConsent
+    ) {
+      setShowPopup(false);
+    }
+  }, [status, userDataLoading, userData]);
+
+  if (!showPopup) {
     return null;
   }
 

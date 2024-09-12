@@ -23,7 +23,10 @@ export default function VerifyEmail() {
       }
       if (typeof token === "string") {
         setVerificationCode(token);
-        handleSubmit();
+      }
+      // Only submit if both email and token are available
+      if (typeof routerEmail === "string" && typeof token === "string") {
+        submitVerification.mutate({ email: routerEmail, token });
       }
     }
   }, [router.isReady, router.query]);
