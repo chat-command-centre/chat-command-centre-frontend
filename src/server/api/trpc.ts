@@ -78,7 +78,10 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof ZodError ? error.cause.flatten() : null,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          error.cause instanceof ZodError
+            ? (error.cause as any).flatten()
+            : null,
       },
     };
   },

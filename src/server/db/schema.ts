@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   varchar,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -18,27 +19,6 @@ import { type AdapterAccount } from "next-auth/adapters";
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
 export const createTable = pgTableCreator((name) => `the-blog_${name}`);
-
-export const posts = createTable(
-  "post",
-  {
-    id: serial("id").primaryKey(),
-    name: varchar("name", { length: 256 }),
-    createdById: varchar("created_by", { length: 255 })
-      .notNull()
-      .references(() => users.id),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-      () => new Date()
-    ),
-  },
-  (example) => ({
-    createdByIdIdx: index("created_by_idx").on(example.createdById),
-    nameIndex: index("name_idx").on(example.name),
-  })
-);
 
 export const users = createTable("user", {
   id: varchar("id", { length: 255 })
@@ -52,10 +32,20 @@ export const users = createTable("user", {
     withTimezone: true,
   }).default(sql`CURRENT_TIMESTAMP`),
   image: varchar("image", { length: 255 }),
+  hashedPassword: varchar("hashed_password", { length: 255 }),
+  resetToken: varchar("reset_token", { length: 255 }),
+  resetTokenExpiry: timestamp("reset_token_expiry", {
+    mode: "date",
+    withTimezone: true,
+  }),
+  tipsEnabled: boolean("tips_enabled").default(false),
+  stripeAccountId: varchar("stripe_account_id", { length: 255 }),
+  hasAcceptedConsent: boolean("has_accepted_consent").default(false),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
+  posts: many(posts),
 }));
 
 export const accounts = createTable(
@@ -84,7 +74,7 @@ export const accounts = createTable(
       columns: [account.provider, account.providerAccountId],
     }),
     userIdIdx: index("account_user_id_idx").on(account.userId),
-  })
+  }),
 );
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -107,7 +97,7 @@ export const sessions = createTable(
   },
   (session) => ({
     userIdIdx: index("session_user_id_idx").on(session.userId),
-  })
+  }),
 );
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -126,5 +116,96 @@ export const verificationTokens = createTable(
   },
   (vt) => ({
     compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
-  })
+  }),
 );
+export const posts = createTable(
+  "post",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 256 }).notNull().default("Untitled"),
+    createdById: varchar("created_by", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+    content: text("content").notNull(),
+  },
+  (example) => ({
+    createdByIdIdx: index("created_by_idx").on(example.createdById),
+    nameIndex: index("name_idx").on(example.name),
+  }),
+);
+
+export const postsRelations = relations(posts, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [posts.createdById],
+    references: [users.id],
+  }),
+  votes: many(votes),
+  tips: many(tips),
+}));
+
+export const votes = createTable(
+  "vote",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    value: integer("value").notNull(), // 1 for upvote, -1 for downvote
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (vote) => ({
+    userPostIndex: index("user_post_idx").on(vote.userId, vote.postId),
+  }),
+);
+
+export const votesRelations = relations(votes, ({ one }) => ({
+  post: one(posts, {
+    fields: [votes.postId],
+    references: [posts.id],
+  }),
+  user: one(users, {
+    fields: [votes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const tips = createTable(
+  "tip",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id),
+    userId: varchar("user_id", { length: 255 }).references(() => users.id),
+    email: varchar("email", { length: 255 }),
+    amount: integer("amount").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (tip) => ({
+    userPostIndex: index("user_post_tip_idx").on(tip.userId, tip.postId),
+  }),
+);
+
+export const tipsRelations = relations(tips, ({ one }) => ({
+  post: one(posts, {
+    fields: [tips.postId],
+    references: [posts.id],
+  }),
+  user: one(users, {
+    fields: [tips.userId],
+    references: [users.id],
+  }),
+}));

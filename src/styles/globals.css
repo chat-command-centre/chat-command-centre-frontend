@@ -1,3 +1,106 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --background: #f0f4f8;
+  --text: #2c3e50;
+  --primary: #3498db;
+  --secondary: #2ecc71;
+  --accent: #e74c3c;
+}
+
+.theme-light-red {
+  --background: #fff5f5;
+  --text: #4a2828;
+  --primary: #e53e3e;
+  --secondary: #f56565;
+  --accent: #fc8181;
+}
+
+.theme-light-yellow {
+  --background: #fffff0;
+  --text: #4a4a28;
+  --primary: #d69e2e;
+  --secondary: #ecc94b;
+  --accent: #f6e05e;
+}
+
+.theme-dark {
+  --background: #2d3748;
+  --text: #f7fafc;
+  --primary: #4299e1;
+  --secondary: #48bb78;
+  --accent: #ed8936;
+}
+
+.theme-dark-red {
+  --background: #2d2a2e;
+  --text: #f7fafc;
+  --primary: #fc8181;
+  --secondary: #f56565;
+  --accent: #e53e3e;
+}
+
+.theme-dark-yellow {
+  --background: #2d2c2a;
+  --text: #f7fafc;
+  --primary: #f6e05e;
+  --secondary: #ecc94b;
+  --accent: #d69e2e;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  overflow-x: hidden;
+  padding-top: 5rem;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+#particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+.blog-container {
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.blog-title {
+  color: var(--text);
+}
+
+.blog-post {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.blog-post:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.back-link {
+  background-color: var(--primary);
+  color: var(--text);
+  padding: 8px 16px;
+  border-radius: 20px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.back-link:hover {
+  background-color: var(--secondary);
+}
