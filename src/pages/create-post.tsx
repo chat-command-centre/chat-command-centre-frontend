@@ -11,7 +11,7 @@ export default function CreatePost() {
 
   const createPost = api.post.create.useMutation({
     onSuccess: (newPost) => {
-      void router.push(`/post/${newPost.id}`);
+      void router.push(`/post/${newPost?.id ?? ""}`);
     },
   });
 

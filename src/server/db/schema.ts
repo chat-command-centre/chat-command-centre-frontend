@@ -11,6 +11,7 @@ import {
   boolean,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
+import { createSelectSchema, createInsertSchema } from "drizzle-zod";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -25,6 +26,7 @@ export const users = createTable("user", {
     .notNull()
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
+  username: varchar("username", { length: 50 }).notNull().unique(), // Add this line
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull(),
   emailVerified: timestamp("email_verified", {
@@ -49,6 +51,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   followers: many(follows, { relationName: "follower" }),
   following: many(follows, { relationName: "following" }),
 }));
+
+export const usersSelectSchema = createSelectSchema(users);
+export const usersInsertSchema = createInsertSchema(users);
+export type UserSelect = typeof users.$inferSelect;
+export type UserInsert = typeof users.$inferInsert;
 
 export const accounts = createTable(
   "account",
@@ -83,6 +90,11 @@ export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
 }));
 
+export const accountsSelectSchema = createSelectSchema(accounts);
+export const accountsInsertSchema = createInsertSchema(accounts);
+export type AccountSelect = typeof accounts.$inferSelect;
+export type AccountInsert = typeof accounts.$inferInsert;
+
 export const sessions = createTable(
   "session",
   {
@@ -106,6 +118,11 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
 
+export const sessionsSelectSchema = createSelectSchema(sessions);
+export const sessionsInsertSchema = createInsertSchema(sessions);
+export type SessionSelect = typeof sessions.$inferSelect;
+export type SessionInsert = typeof sessions.$inferInsert;
+
 export const verificationTokens = createTable(
   "verification_token",
   {
@@ -120,6 +137,13 @@ export const verificationTokens = createTable(
     compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
   }),
 );
+export const verificationTokensSelectSchema =
+  createSelectSchema(verificationTokens);
+export const verificationTokensInsertSchema =
+  createInsertSchema(verificationTokens);
+export type VerificationTokenSelect = typeof verificationTokens.$inferSelect;
+export type VerificationTokenInsert = typeof verificationTokens.$inferInsert;
+
 export const posts = createTable(
   "post",
   {
@@ -150,6 +174,11 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   votes: many(votes),
   tips: many(tips),
 }));
+
+export const postsSelectSchema = createSelectSchema(posts);
+export const postsInsertSchema = createInsertSchema(posts);
+export type PostSelect = typeof posts.$inferSelect;
+export type PostInsert = typeof posts.$inferInsert;
 
 export const votes = createTable(
   "vote",
@@ -182,6 +211,11 @@ export const votesRelations = relations(votes, ({ one }) => ({
   }),
 }));
 
+export const votesSelectSchema = createSelectSchema(votes);
+export const votesInsertSchema = createInsertSchema(votes);
+export type VoteSelect = typeof votes.$inferSelect;
+export type VoteInsert = typeof votes.$inferInsert;
+
 export const tips = createTable(
   "tip",
   {
@@ -212,6 +246,11 @@ export const tipsRelations = relations(tips, ({ one }) => ({
   }),
 }));
 
+export const tipsSelectSchema = createSelectSchema(tips);
+export const tipsInsertSchema = createInsertSchema(tips);
+export type TipSelect = typeof tips.$inferSelect;
+export type TipInsert = typeof tips.$inferInsert;
+
 export const loginAttempts = createTable(
   "login_attempt",
   {
@@ -228,6 +267,11 @@ export const loginAttempts = createTable(
     emailIndex: index("login_attempt_email_idx").on(loginAttempt.email),
   }),
 );
+
+export const loginAttemptsSelectSchema = createSelectSchema(loginAttempts);
+export const loginAttemptsInsertSchema = createInsertSchema(loginAttempts);
+export type LoginAttemptSelect = typeof loginAttempts.$inferSelect;
+export type LoginAttemptInsert = typeof loginAttempts.$inferInsert;
 
 export const follows = createTable(
   "follow",
@@ -255,9 +299,16 @@ export const followsRelations = relations(follows, ({ one }) => ({
   follower: one(users, {
     fields: [follows.followerId],
     references: [users.id],
+    relationName: "follower",
   }),
   following: one(users, {
     fields: [follows.followingId],
     references: [users.id],
+    relationName: "following",
   }),
 }));
+
+export const followsSelectSchema = createSelectSchema(follows);
+export const followsInsertSchema = createInsertSchema(follows);
+export type FollowSelect = typeof follows.$inferSelect;
+export type FollowInsert = typeof follows.$inferInsert;

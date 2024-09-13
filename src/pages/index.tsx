@@ -15,7 +15,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="min-h-screen p-4">
-        <div className="blog-container container mx-auto max-w-4xl p-8">
+        <div className="main-content-panel container mx-auto max-w-4xl p-8">
           <h1 className="mb-8 text-center text-6xl font-bold">
             Totally Rad Blog
           </h1>
@@ -41,16 +41,12 @@ export default function Home() {
           {isLoading ? (
             <p className="text-2xl">Loading awesome posts...</p>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="space-y-8">
               {posts?.map((post) => (
-                <Link
-                  key={post.id}
-                  className="blog-post flex flex-col gap-2 rounded-lg bg-white p-4 shadow-md transition-transform hover:scale-105"
-                  href={`/post/${post.id}`}
-                >
+                <Link key={post.id} className="block" href={`/post/${post.id}`}>
                   <h3 className="text-2xl font-bold">{post.name}</h3>
                   <p className="text-lg">{post.content.substring(0, 100)}...</p>
-                  <span className="mt-2 self-end text-sm italic text-blue-600">
+                  <span className="mt-2 inline-block text-sm italic text-blue-600">
                     Read more...
                   </span>
                 </Link>

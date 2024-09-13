@@ -2,33 +2,36 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { users } from "~/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { hashPassword, generateVerificationToken } from "~/server/auth";
 import { db } from "~/server/db";
 import { sendEmail } from "~/utils/email";
 import { env } from "~/env";
-import { loginAttempts } from "~/server/db/schema";
 
 export const authRouter = createTRPCRouter({
   signUp: publicProcedure
     .input(
       z
         .object({
-          name: z.string(),
+          username: z.string().min(3).max(50),
+          name: z.string().min(1), // Ensure name is required
           email: z.string().email(),
           password: z.string().min(8),
         })
         .strict(),
     )
     .mutation(async ({ input }) => {
-      const result = await db
+      const existingUser = await db
         .select()
         .from(users)
-        .where(eq(users.email, input.email));
-      if (result.length > 0) {
+        .where(
+          or(eq(users.email, input.email), eq(users.username, input.username)),
+        );
+
+      if (existingUser.length > 0) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "User with this email already exists",
+          message: "User with this email or username already exists",
         });
       }
 
@@ -37,11 +40,12 @@ export const authRouter = createTRPCRouter({
       const newUser = await db
         .insert(users)
         .values({
+          username: input.username,
           name: input.name,
           email: input.email,
           hashedPassword,
-          resetToken: verificationToken, // Use resetToken for email verification
-          resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          resetToken: verificationToken,
+          resetTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
         })
         .returning();
 

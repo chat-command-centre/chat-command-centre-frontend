@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS "app_account" (
 	CONSTRAINT "app_account_provider_provider_account_id_pk" PRIMARY KEY("provider","provider_account_id")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "app_follow" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"follower_id" varchar(255) NOT NULL,
+	"following_id" varchar(255) NOT NULL,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "app_login_attempt" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"email" varchar(255) NOT NULL,
@@ -48,6 +55,7 @@ CREATE TABLE IF NOT EXISTS "app_tip" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "app_user" (
 	"id" varchar(255) PRIMARY KEY NOT NULL,
+	"username" varchar(50) NOT NULL,
 	"name" varchar(255),
 	"email" varchar(255) NOT NULL,
 	"email_verified" timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -57,7 +65,8 @@ CREATE TABLE IF NOT EXISTS "app_user" (
 	"reset_token_expiry" timestamp with time zone,
 	"tips_enabled" boolean DEFAULT false,
 	"stripe_account_id" varchar(255),
-	"has_accepted_consent" boolean DEFAULT false
+	"has_accepted_consent" boolean DEFAULT false,
+	CONSTRAINT "app_user_username_unique" UNIQUE("username")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "app_verification_token" (
@@ -77,6 +86,18 @@ CREATE TABLE IF NOT EXISTS "app_vote" (
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "app_account" ADD CONSTRAINT "app_account_user_id_app_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."app_user"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "app_follow" ADD CONSTRAINT "app_follow_follower_id_app_user_id_fk" FOREIGN KEY ("follower_id") REFERENCES "public"."app_user"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "app_follow" ADD CONSTRAINT "app_follow_following_id_app_user_id_fk" FOREIGN KEY ("following_id") REFERENCES "public"."app_user"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -118,6 +139,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "account_user_id_idx" ON "app_account" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "follower_following_idx" ON "app_follow" USING btree ("follower_id","following_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "login_attempt_email_idx" ON "app_login_attempt" USING btree ("email");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "created_by_idx" ON "app_post" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "name_idx" ON "app_post" USING btree ("name");--> statement-breakpoint

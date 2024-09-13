@@ -3,6 +3,7 @@ import {
   getServerSession,
   type NextAuthOptions,
   type DefaultSession,
+  DefaultUser,
 } from "next-auth";
 import { type Adapter } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
@@ -37,7 +38,16 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
+      username: string;
     } & DefaultSession["user"];
+  }
+
+  interface User extends DefaultUser {
+    id: string;
+    username: string;
+    name: string | null;
+    email: string;
+    image: string | null;
   }
 }
 
@@ -48,25 +58,21 @@ declare module "next-auth" {
  */
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    // session: ({ session, user }) => ({
-    //   ...session,
-    //   user: {
-    //     ...session.user,
-    //     id: user.id,
-    //   },
-    // }),
-    async jwt({ token, user }) {
+    jwt: ({ token, user }) => {
       if (user) {
         token.id = user.id;
+        token.username = user.username;
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
+    session: ({ session, token }) => ({
+      ...session,
+      user: {
+        ...session.user,
+        id: token.id as string,
+        username: token.username as string,
+      },
+    }),
   },
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -113,10 +119,12 @@ export const authOptions: NextAuthOptions = {
           await db.insert(loginAttempts).values({
             email: credentials.email,
             success,
-            ipAddress:
-              (req.headers["x-forwarded-for"] as string) ??
-              req.socket.remoteAddress,
-            userAgent: req.headers["user-agent"],
+            ipAddress: req.headers
+              ? ((req.headers["x-forwarded-for"] as string) ?? "unknown")
+              : "unknown",
+            userAgent: req.headers
+              ? (req.headers["user-agent"] ?? "unknown")
+              : "unknown",
           });
           console.log("Login attempt logged.");
         }
@@ -125,12 +133,14 @@ export const authOptions: NextAuthOptions = {
           // Return only the necessary User properties
           console.log("Returning user data: ", {
             id: user.id,
+            username: user.username,
             name: user.name,
             email: user.email,
             image: user.image,
           });
           return {
             id: user.id,
+            username: user.username,
             name: user.name,
             email: user.email,
             image: user.image,
@@ -186,11 +196,17 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: "/signin",
+    signOut: "/signin", // Redirect to signin page after logout
     error: "/signin",
     verifyRequest: "/auth/verify-request",
   },
   session: {
     strategy: "jwt",
+  },
+  events: {
+    signOut: async ({ session, token }) => {
+      // You can add any cleanup logic here if needed
+    },
   },
 };
 

@@ -42,7 +42,13 @@ export default function SearchResults() {
                   {post.content.substring(0, 150)}...
                 </p>
                 <div className="mt-2 text-sm text-gray-500">
-                  Score: {post.score} | By: {post.createdBy.name}
+                  Score: {post.score} | By:{" "}
+                  <Link
+                    href={`/profile/${post.createdBy.username}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {post.createdBy.name}
+                  </Link>
                 </div>
               </div>
             ))}

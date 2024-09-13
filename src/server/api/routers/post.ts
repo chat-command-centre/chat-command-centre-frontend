@@ -4,12 +4,12 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { posts, votes, tips } from "~/server/db/schema";
+import { posts, votes, tips, users } from "~/server/db/schema";
 import { eq, desc, sql, like } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import Stripe from "stripe";
 import { env } from "~/env";
-import { sendEmail, sendThankYouEmail } from "~/utils/email";
+import { sendEmail } from "~/utils/email";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
@@ -19,7 +19,10 @@ export const postRouter = createTRPCRouter({
   create: protectedProcedure
     .input(
       z
-        .object({ title: z.string().min(1), content: z.string().min(1) })
+        .object({
+          title: z.string().min(1),
+          content: z.string(), // Remove the .min(1) if you want to allow empty content
+        })
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
@@ -175,25 +178,35 @@ export const postRouter = createTRPCRouter({
       return { clientSecret: paymentIntent.client_secret };
     }),
 
-  getUserPosts: protectedProcedure.query(async ({ ctx }) => {
-    const userPosts = await ctx.db.query.posts.findMany({
-      where: eq(posts.createdById, ctx.session.user.id),
-      orderBy: [desc(posts.createdAt)],
-      with: {
-        votes: true,
-        tips: true,
-      },
-    });
+  getUserPosts: publicProcedure
+    .input(z.object({ username: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const user = await ctx.db.query.users.findFirst({
+        where: eq(users.username, input.username),
+      });
 
-    return userPosts.map((post) => ({
-      ...post,
-      voteCount: post.votes.reduce((acc, vote) => acc + vote.value, 0),
-      tipCount: post.tips.length,
-      score:
-        post.votes.reduce((acc, vote) => acc + vote.value, 0) +
-        post.tips.length * 10,
-    }));
-  }),
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const userPosts = await ctx.db.query.posts.findMany({
+        where: eq(posts.createdById, user.id),
+        orderBy: [desc(posts.createdAt)],
+        with: {
+          votes: true,
+          tips: true,
+        },
+      });
+
+      return userPosts.map((post) => ({
+        ...post,
+        voteCount: post.votes.reduce((acc, vote) => acc + vote.value, 0),
+        tipCount: post.tips.length,
+        score:
+          post.votes.reduce((acc, vote) => acc + vote.value, 0) +
+          post.tips.length * 10,
+      }));
+    }),
 
   search: publicProcedure
     .input(z.object({ query: z.string() }).strict())
@@ -216,5 +229,69 @@ export const postRouter = createTRPCRouter({
           post.votes.reduce((acc, vote) => acc + vote.value, 0) +
           post.tips.length * 10,
       }));
+    }),
+
+  updatePost: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1),
+        content: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const post = await ctx.db.query.posts.findFirst({
+        where: eq(posts.id, input.id),
+      });
+
+      if (!post || post.createdById !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not authorized to edit this post",
+        });
+      }
+
+      const updatedPost = await ctx.db
+        .update(posts)
+        .set({
+          name: input.name,
+          content: input.content,
+          updatedAt: new Date(),
+        })
+        .where(eq(posts.id, input.id))
+        .returning();
+
+      return updatedPost[0];
+    }),
+
+  deletePost: protectedProcedure
+    .input(z.object({ postId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const post = await ctx.db.query.posts.findFirst({
+        where: eq(posts.id, input.postId),
+      });
+
+      if (!post) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Post not found",
+        });
+      }
+
+      if (post.createdById !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not authorized to delete this post",
+        });
+      }
+
+      // Delete associated votes and tips
+      await ctx.db.delete(votes).where(eq(votes.postId, input.postId));
+      await ctx.db.delete(tips).where(eq(tips.postId, input.postId));
+
+      // Delete the post
+      await ctx.db.delete(posts).where(eq(posts.id, input.postId));
+
+      return { success: true };
     }),
 });

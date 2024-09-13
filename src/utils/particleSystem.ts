@@ -15,12 +15,19 @@ class Particle {
     this.color = color;
   }
 
-  update(canvasWidth: number, canvasHeight: number) {
-    this.x += this.speedX;
-    this.y += this.speedY;
+  update(
+    canvasWidth: number,
+    canvasHeight: number,
+    offsetX: number,
+    offsetY: number,
+  ) {
+    this.x += this.speedX + offsetX * 0.05;
+    this.y += this.speedY + offsetY * 0.05;
 
-    if (this.x > canvasWidth || this.x < 0) this.speedX *= -1;
-    if (this.y > canvasHeight || this.y < 0) this.speedY *= -1;
+    if (this.x > canvasWidth) this.x = 0;
+    if (this.x < 0) this.x = canvasWidth;
+    if (this.y > canvasHeight) this.y = 0;
+    if (this.y < 0) this.y = canvasHeight;
   }
 }
 
@@ -34,6 +41,10 @@ export function createParticleSystem(
   const particleCount = 100;
   const particleColor = getParticleColor(theme);
 
+  let mouseX = 0;
+  let mouseY = 0;
+  let scrollY = 0;
+
   for (let i = 0; i < particleCount; i++) {
     particles.push(
       new Particle(canvasEl.width, canvasEl.height, particleColor),
@@ -43,19 +54,31 @@ export function createParticleSystem(
   function animate() {
     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
+    const offsetX = (mouseX - canvasEl.width / 2) * 0.01;
+    const offsetY = (mouseY - canvasEl.height / 2) * 0.01 + scrollY * 0.1;
+
     particles.forEach((particle) => {
       ctx.beginPath();
       ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
       ctx.fillStyle = particle.color;
       ctx.fill();
 
-      particle.update(canvasEl.width, canvasEl.height);
+      particle.update(canvasEl.width, canvasEl.height, offsetX, offsetY);
     });
 
     requestAnimationFrame(animate);
   }
 
   animate();
+
+  window.addEventListener("mousemove", (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  window.addEventListener("scroll", () => {
+    scrollY = window.scrollY;
+  });
 }
 
 function getParticleColor(theme: string): string {

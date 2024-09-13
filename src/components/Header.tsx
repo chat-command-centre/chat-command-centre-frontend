@@ -84,7 +84,7 @@ export function Header({ onThemeChange }: HeaderProps) {
           {session ? (
             <>
               <Button variant="ghost" asChild>
-                <Link href="/profile">Profile</Link>
+                <Link href={`/profile/${session.user.username}`}>Profile</Link>
               </Button>
               <Button variant="ghost" onClick={() => void signOut()}>
                 Log out

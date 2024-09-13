@@ -67,7 +67,7 @@ body {
   z-index: -1;
 }
 
-.blog-container {
+.main-content-panel {
   background-color: rgba(255, 255, 255, 0.7);
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -79,16 +79,12 @@ body {
 }
 
 .blog-post {
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 8px;
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+  /* Remove any remaining styles for individual post backgrounds or shadows */
 }
 
+/* Remove hover effect */
 .blog-post:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  /* Remove transform and box-shadow changes */
 }
 
 .back-link {
