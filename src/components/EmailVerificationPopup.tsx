@@ -13,7 +13,7 @@ export default function EmailVerificationPopup() {
     onSuccess: () => {
       router.reload();
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error("Error verifying email:", error);
       setError("Failed to verify email. Please try again.");
     },
@@ -24,7 +24,7 @@ export default function EmailVerificationPopup() {
       setError(null);
       // Optionally, show a success message
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error("Error resending verification code:", error);
       setError("Failed to resend verification code. Please try again.");
     },

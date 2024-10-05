@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "~/utils/api";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation"; // Changed back to 'next/navigation'
 import { useSession } from "next-auth/react";
 
 interface ConsentAgreementPopupProps {
@@ -22,7 +22,7 @@ export default function ConsentAgreementPopup({
       onAccept();
       setShowPopup(false);
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error("Error accepting consent agreement:", error);
       setError("Failed to accept the agreement. Please try again.");
     },

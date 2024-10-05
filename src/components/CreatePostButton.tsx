@@ -7,7 +7,7 @@ export function CreatePostButton() {
   const router = useRouter();
 
   const createPost = api.post.create.useMutation({
-    onSuccess: (newPost) => {
+    onSuccess: (newPost: { id: string }) => {
       void router.push(`/post/${newPost?.id ?? ""}?edit=true`);
     },
   });
