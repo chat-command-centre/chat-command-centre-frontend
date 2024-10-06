@@ -9,6 +9,7 @@ import {
   timestamp,
   varchar,
   boolean,
+  real,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 import { createSelectSchema, createInsertSchema } from "drizzle-zod";
@@ -43,6 +44,7 @@ export const users = createTable("user", {
   tipsEnabled: boolean("tips_enabled").default(false),
   stripeAccountId: varchar("stripe_account_id", { length: 255 }),
   hasAcceptedConsent: boolean("has_accepted_consent").default(false),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -312,3 +314,136 @@ export const followsSelectSchema = createSelectSchema(follows);
 export const followsInsertSchema = createInsertSchema(follows);
 export type FollowSelect = typeof follows.$inferSelect;
 export type FollowInsert = typeof follows.$inferInsert;
+
+// Define the products table
+export const products = createTable(
+  "product",
+  {
+    id: varchar("id", { length: 255 }).notNull().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+    // Remove price and billingInterval from products
+  },
+);
+
+export const productsRelations = relations(products, ({ many }) => ({
+  subscriptions: many(subscriptions),
+}));
+
+export const productsSelectSchema = createSelectSchema(products);
+export const productsInsertSchema = createInsertSchema(products);
+export type ProductSelect = typeof products.$inferSelect;
+export type ProductInsert = typeof products.$inferInsert;
+
+// Define the prices table
+export const prices = createTable(
+  "price",
+  {
+    id: varchar("id", { length: 255 }).notNull().primaryKey(),
+    productId: varchar("product_id", { length: 255 })
+      .notNull()
+      .references(() => products.id),
+    unitAmount: integer("unit_amount").notNull(), // Amount in cents
+    currency: varchar("currency", { length: 10 }).notNull().default("USD"),
+    interval: varchar("interval", { length: 20 }).notNull(), // e.g., 'month', 'year'
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+    // Add other relevant fields as needed
+  },
+);
+
+export const pricesRelations = relations(prices, ({ one, many }) => ({
+  product: one(products, {
+    fields: [prices.productId],
+    references: [products.id],
+  }),
+  subscriptions: many(subscriptions),
+}));
+
+export const pricesSelectSchema = createSelectSchema(prices);
+export const pricesInsertSchema = createInsertSchema(prices);
+export type PriceSelect = typeof prices.$inferSelect;
+export type PriceInsert = typeof prices.$inferInsert;
+
+// Update subscriptions table to reference priceId
+export const subscriptions = createTable(
+  "subscription",
+  {
+    id: varchar("id", { length: 255 }).notNull().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    priceId: varchar("price_id", { length: 255 })
+      .notNull()
+      .references(() => prices.id),
+    status: varchar("status", { length: 50 }).notNull(), // e.g., 'active', 'canceled'
+    startDate: timestamp("start_date", { withTimezone: true }).notNull(),
+    endDate: timestamp("end_date", { withTimezone: true }),
+    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+    // Add other relevant fields as needed
+  },
+);
+
+// Update subscriptionsRelations
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+  price: one(prices, {
+    fields: [subscriptions.priceId],
+    references: [prices.id],
+  }),
+  // Remove product relation if not needed
+}));
+
+export const subscriptionsSelectSchema = createSelectSchema(subscriptions);
+export const subscriptionsInsertSchema = createInsertSchema(subscriptions);
+export type SubscriptionSelect = typeof subscriptions.$inferSelect;
+export type SubscriptionInsert = typeof subscriptions.$inferInsert;
+
+// Define the usage table to track token usage
+export const usage = createTable(
+  "usage",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id),
+    tokensUsed: integer("tokens_used").notNull().default(0),
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+);
+
+export const usageRelations = relations(usage, ({ one }) => ({
+  user: one(users, {
+    fields: [usage.userId],
+    references: [users.id],
+  }),
+}));
+
+export const usageSelectSchema = createSelectSchema(usage);
+export const usageInsertSchema = createInsertSchema(usage);
+export type UsageSelect = typeof usage.$inferSelect;
+export type UsageInsert = typeof usage.$inferInsert;

@@ -27,6 +27,11 @@ import AzureADProvider from "next-auth/providers/azure-ad";
 import DiscordProvider from "next-auth/providers/discord";
 import GoogleProvider from "next-auth/providers/google";
 import AppleProvider from "next-auth/providers/apple";
+import Stripe from 'stripe';
+
+const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-09-30.acacia',
+});
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -231,3 +236,22 @@ export const hashPassword = async (password: string): Promise<string> => {
   const saltRounds = 10;
   return bcrypt.hash(password, saltRounds);
 };
+
+async function createUser(userData: UserInsert) {
+  // ... create user in database ...
+
+  // Create a Stripe customer
+  const customer = await stripe.customers.create({
+    email: userData.email,
+    metadata: {
+      userId: user.id,
+    },
+  });
+
+  // Update user with Stripe customer ID
+  await db.update(users)
+    .set({ stripeCustomerId: customer.id })
+    .where(eq(users.id, user.id));
+
+  // ... rest of the code ...
+}
